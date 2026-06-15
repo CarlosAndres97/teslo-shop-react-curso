@@ -16,21 +16,24 @@ import { MessagesWsModule } from './messages-ws/messages-ws.module';
   imports: [
     ConfigModule.forRoot(),
 
-    TypeOrmModule.forRoot({
-      ssl: process.env.STAGE === 'prod',
-      extra: {
-        ssl: process.env.STAGE === 'prod'
-              ? { rejectUnauthorized: false }
-              : null,
+    TypeOrmModule.forRootAsync({
+      useFactory: () => {
+        const host = process.env.DB_HOST || '';
+        const isNeon = host.includes('neon') || host.includes('neon.tech');
+        const isSSL = process.env.DB_SSL === 'true' || process.env.STAGE === 'prod' || isNeon;
+        return {
+          type: 'postgres',
+          host: process.env.DB_HOST,
+          port: +process.env.DB_PORT,
+          database: process.env.DB_NAME,
+          username: process.env.DB_USERNAME,
+          password: process.env.DB_PASSWORD,
+          autoLoadEntities: true,
+          synchronize: true,
+          ssl: isSSL ? { rejectUnauthorized: false } : false,
+          extra: isSSL ? { ssl: { rejectUnauthorized: false } } : undefined,
+        } as any;
       },
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: +process.env.DB_PORT,
-      database: process.env.DB_NAME,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,      
-      autoLoadEntities: true,
-      synchronize: true,
     }),
 
     ServeStaticModule.forRoot({
